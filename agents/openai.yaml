@@ -1,0 +1,4 @@
+interface:
+  display_name: "手撕海报"
+  short_description: "复古旅行手账撕纸拼贴海报：分析参考图手法、按风景特色设计手绘底图、AI生成、视觉质检与修正"
+  default_prompt: "请用手撕海报技能，把提供的风景照片制作成竖版撕纸拼贴旅行海报"

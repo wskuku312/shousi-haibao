@@ -8,6 +8,7 @@
 - 按风景标志元素设计手绘底图（喀斯特峰林、荷塘水系、水岸峰林、湿地水网……）
 - 视觉模型生成海报（DashScope qwen-image-3.0，1536x2560 → 1800x3000）
 - 视觉模型质检 + 程序化修正（文字精确覆盖、黑色元素染色、额度探测）
+- 支持一次使用 4 张以上照片：自动拼成 2x2 四宫格拼板输入，每格分别做成独立手撕碎片
 
 ## 目录结构
 
@@ -53,6 +54,11 @@ python scripts/describe_image.py "<风景照片>" "请用中文描述：主体�
 python scripts/gen_poster.py lotus \
   --src-dir "<素材目录>" \
   --ref "<参考拼贴图>" \
+  --out "<输出目录>"
+
+# 四图合一示例（无需参考图，自动四宫格拼板）
+python scripts/gen_poster.py puzhehei4 \
+  --src-dir "<素材目录>" \
   --out "<输出目录>"
 
 # 3. 质检

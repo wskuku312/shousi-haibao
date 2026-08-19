@@ -77,6 +77,20 @@ CONFIGS = {
             TEXT1="Boat / Mist / Karst",
         ),
     },
+    "puzhehei4": {
+        "files": ["67a1ffb6a8eaaa23f2646124d4292ca7.jpg",
+                  "681fab74ba4fa4fd0ebb695fe1ec0e2a.jpg",
+                  "4f70cb3eddffd8d7992c7973e7e1a803.jpg",
+                  "03680c9769930ba6b5d9c0c9d1fe8123.jpg"],
+        "prompt": """请用这张参考图制作一张竖版3:5复古旅行手账式撕纸拼贴海报。参考图是一张2x2四宫格拼板，包含四张普者黑实景照片：左上=粉色小船游湖、右上=俯瞰喀斯特峰林湿地（夕阳）、左下=盛夏荷塘粉荷、右下=湿地荷塘芦苇与石山。
+1) 剪切手法：把四格照片分别作为四块独立的手撕碎片（白色纸芯纤维毛边、带极轻投影）；主片用右上俯瞰峰林湿地放中上居中（最大），小船放右中，荷塘放左中，湿地小片放右下；禁止整齐矩形、描边、拍立得白框。
+2) 排版：非网格非对称，碎片沿S形路径排布，大小对比悬殊，碎片间靠奶白纸缝隔开、互不重叠。
+3) 手绘底图（重点）：纸面预印层为普者黑喀斯特地貌地图风格——圆润锥形峰林、峰丘等高线、溶洞与地下河示意、湖泊水网线稿；铅笔/淡褐墨线、低饱和淡彩（灰绿、灰褐）；留白占三到四成。
+4) 蓝色路线：一条手绘钴蓝蜿蜒线从左上贯穿到右下，从碎片纸缝间穿过像缝合线；单条连续、无箭头、无分叉。
+5) 装饰：少量粉色（呼应荷花与小船）小色块/花瓣点缀空白，小面积克制。
+6) 文字：左下角一行小号打字机英文 Ridge / Bloom / Drift，下面一行更小的 PUZHEHEI，字距拉开、灰褐色，拼写必须正确。
+7) 禁止：人物（含远景人影）、水印、杂乱文字、大标题、霓虹色、3D效果、整齐矩形照片、拍立得白框。""",
+    },
 }
 
 
@@ -88,10 +102,33 @@ def data_uri(path, max_dim=1536, quality=90):
     return "data:image/jpeg;base64," + base64.b64encode(buf.getvalue()).decode()
 
 
+def contact_sheet(files, src_dir, cell=768, gutter=14):
+    """超过3张输入时，拼成2x2四宫格拼板作为单张输入。"""
+    n = len(files)
+    cols = 2
+    rows = (n + 1) // 2
+    w = cols * cell + (cols + 1) * gutter
+    h = rows * cell + (rows + 1) * gutter
+    sheet = Image.new("RGB", (w, h), (255, 255, 255))
+    for i, f in enumerate(files):
+        img = Image.open(src_dir / f).convert("RGB")
+        img = ImageOps.fit(img, (cell, cell), method=Image.Resampling.LANCZOS)
+        r, c = divmod(i, cols)
+        sheet.paste(img, (gutter + c * (cell + gutter), gutter + r * (cell + gutter)))
+    buf = io.BytesIO()
+    sheet.save(buf, "JPEG", quality=90)
+    return "data:image/jpeg;base64," + base64.b64encode(buf.getvalue()).decode()
+
+
 def call_api(key, ref, files, src_dir, prompt):
-    content = [{"image": data_uri(ref)}]
-    for f in files:
-        content.append({"image": data_uri(src_dir / f)})
+    content = []
+    if ref:
+        content.append({"image": data_uri(ref)})
+    if len(files) > 3:
+        content.append({"image": contact_sheet(files, src_dir)})
+    else:
+        for f in files:
+            content.append({"image": data_uri(src_dir / f)})
     content.append({"text": prompt})
     payload = {
         "model": MODEL,
@@ -125,7 +162,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("name", choices=list(CONFIGS))
     ap.add_argument("--src-dir", required=True)
-    ap.add_argument("--ref", required=True, help="参考拼贴图路径")
+    ap.add_argument("--ref", default=None, help="参考拼贴图路径（可选）")
     ap.add_argument("--out", default=str(Path.cwd() / "output"))
     args = ap.parse_args()
     cfg = CONFIGS[args.name]
@@ -138,7 +175,8 @@ def main():
     out_dir.mkdir(parents=True, exist_ok=True)
     out = out_dir / f"poster-{args.name}-v1.png"
     print(f"[{args.name}] generating...")
-    url = call_api(key, Path(args.ref), cfg["files"], src_dir, cfg["prompt"])
+    ref_path = Path(args.ref) if args.ref else None
+    url = call_api(key, ref_path, cfg["files"], src_dir, cfg["prompt"])
     req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
     with urllib.request.urlopen(req, timeout=300) as resp:
         raw = resp.read()

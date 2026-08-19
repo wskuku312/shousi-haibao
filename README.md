@@ -61,6 +61,12 @@ python scripts/gen_poster.py puzhehei4 \
   --src-dir "<素材目录>" \
   --out "<输出目录>"
 
+# 河流变体（贯穿元素改为手绘河流）
+python scripts/gen_poster.py puzhehei4 \
+  --src-dir "<素材目录>" \
+  --out "<输出目录>" \
+  --variant river
+
 # 3. 质检
 python scripts/describe_image.py "<输出海报>" "请检查：碎片分布、手撕毛边、蓝线、底图主题、文字、人物"
 

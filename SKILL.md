@@ -13,7 +13,7 @@ description: 制作"手撕海报"——复古旅行手账式撕纸拼贴竖版�
 2. **学习参考图**（可选）：用户提供参考拼贴图时，先运行 `describe_image.py` 分析其剪切与排版手法，对照 references/workflow.md 的"手法清单"。
 3. **设计手绘底图**：按风景的标志元素选择底图主题（见 references/workflow.md"底图主题表"；普者黑→喀斯特峰林+等高线+溶洞+湖网）。
 4. **组装提示词**：用 references/prompts.md 模板（剪切手法、S 形排版、手绘底图、照片内容、呼应色、文字、禁止项），按素材替换照片内容。
-5. **生成**：`python scripts/gen_poster.py <配置名> --src-dir <素材目录> --ref <参考图> --out <输出目录>`。模型 qwen-image-3.0，尺寸 1536x2560，输出放大到 1800x3000。
+5. **生成**：`python scripts/gen_poster.py <配置名> --src-dir <素材目录> [--ref <参考图>] --out <输出目录> [--variant line|river]`。模型 qwen-image-3.0，尺寸 1536x2560，输出放大到 1800x3000。`--variant river` 把贯穿钴蓝路线改为手绘河流（水域主题或用户要求时使用；见 references/prompts.md）。
 6. **质检**：运行 `describe_image.py` 按 references/workflow.md"质检清单"逐条检查。
 7. **修正**：
    - 文字乱码/拼错 → `scripts/overlay_text.py <图片> <第一行> <第二行>`

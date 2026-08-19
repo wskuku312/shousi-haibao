@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """AI 生成手撕海报（DashScope qwen-image-3.0）。
-用法: gen_poster.py <配置名> --src-dir <素材目录> --ref <参考图> [--out <输出目录>]
-配置名: lotus | peakland | boat（可在 CONFIGS 中新增）
+用法: gen_poster.py <配置名> --src-dir <素材目录> [--ref <参考图>] [--out <输出目录>] [--variant line|river]
+配置名: lotus | peakland | boat | puzhehei4（可在 CONFIGS 中新增）
+变体: line = 贯穿钴蓝路线（默认）；river = 改为手绘河流
 """
 
 import argparse
@@ -86,7 +87,7 @@ CONFIGS = {
 1) 剪切手法：把四格照片分别作为四块独立的手撕碎片（白色纸芯纤维毛边、带极轻投影）；主片用右上俯瞰峰林湿地放中上居中（最大），小船放右中，荷塘放左中，湿地小片放右下；禁止整齐矩形、描边、拍立得白框。
 2) 排版：非网格非对称，碎片沿S形路径排布，大小对比悬殊，碎片间靠奶白纸缝隔开、互不重叠。
 3) 手绘底图（重点）：纸面预印层为普者黑喀斯特地貌地图风格——圆润锥形峰林、峰丘等高线、溶洞与地下河示意、湖泊水网线稿；铅笔/淡褐墨线、低饱和淡彩（灰绿、灰褐）；留白占三到四成。
-4) 手绘河流（重点）：画面中贯穿的蓝色元素改为一条手绘河流——像手绘地图上的河流水系：蜿蜒曲折、宽窄自然变化、带一两处小支流和细水流短笔触，颜色为钴蓝/淡蓝，从左上蜿蜒流过碎片纸缝到右下，像一条河穿过整张拼贴；不要等宽细线、不要箭头、不要过多分叉，保持手绘水彩/铅笔质感。
+4) 蓝色路线：一条手绘钴蓝蜿蜒线从左上贯穿到右下，从碎片纸缝间穿过像缝合线；单条连续、无箭头、无分叉。
 5) 装饰：少量粉色（呼应荷花与小船）小色块/花瓣点缀空白，小面积克制。
 6) 文字：左下角一行小号打字机英文 Ridge / Bloom / Drift，下面一行更小的 PUZHEHEI，字距拉开、灰褐色，拼写必须正确。
 7) 禁止：人物（含远景人影）、水印、杂乱文字、大标题、霓虹色、3D效果、整齐矩形照片、拍立得白框。""",
@@ -100,6 +101,19 @@ def data_uri(path, max_dim=1536, quality=90):
     buf = io.BytesIO()
     img.save(buf, "JPEG", quality=quality)
     return "data:image/jpeg;base64," + base64.b64encode(buf.getvalue()).decode()
+
+
+def resolve_prompt(cfg, variant):
+    prompt = cfg["prompt"]
+    if variant == "river":
+        prompt = prompt.replace(
+            "窄缝让蓝色路线穿过像缝合线",
+            "窄缝让手绘河流穿过，河流蜿蜒曲折、宽窄自然变化、带支流和水流短笔触，像一条河蜿蜒流过整张拼贴")
+        prompt = prompt.replace(
+            "4) 蓝色路线：一条手绘钴蓝蜿蜒线从左上贯穿到右下，从碎片纸缝间穿过像缝合线；单条连续、无箭头、无分叉。",
+            "4) 手绘河流（重点）：画面中贯穿的蓝色元素改为一条手绘河流——像手绘地图上的河流水系：蜿蜒曲折、宽窄自然变化、带一两处小支流和细水流短笔触，颜色为钴蓝/淡蓝，从左上蜿蜒流过碎片纸缝到右下，像一条河穿过整张拼贴；不要等宽细线、不要箭头、不要过多分叉，保持手绘水彩/铅笔质感。")
+        prompt = prompt.replace("蓝色路线", "手绘河流")
+    return prompt
 
 
 def contact_sheet(files, src_dir, cell=768, gutter=14):
@@ -164,6 +178,8 @@ def main():
     ap.add_argument("--src-dir", required=True)
     ap.add_argument("--ref", default=None, help="参考拼贴图路径（可选）")
     ap.add_argument("--out", default=str(Path.cwd() / "output"))
+    ap.add_argument("--variant", choices=["line", "river"], default="line",
+                    help="line=钴蓝路线（默认），river=手绘河流")
     args = ap.parse_args()
     cfg = CONFIGS[args.name]
     env = load_env(Path(__file__).with_name(".env"))
@@ -176,7 +192,8 @@ def main():
     out = out_dir / f"poster-{args.name}-v1.png"
     print(f"[{args.name}] generating...")
     ref_path = Path(args.ref) if args.ref else None
-    url = call_api(key, ref_path, cfg["files"], src_dir, cfg["prompt"])
+    prompt = resolve_prompt(cfg, args.variant)
+    url = call_api(key, ref_path, cfg["files"], src_dir, prompt)
     req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
     with urllib.request.urlopen(req, timeout=300) as resp:
         raw = resp.read()
